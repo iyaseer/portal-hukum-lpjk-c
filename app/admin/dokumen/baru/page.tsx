@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { TIPE_FILE_DIIZINKAN, MAKS_UKURAN_FILE, ekstensiDariNamaFile } from '@/lib/file-config';
 
 type Tugas = { id: string; judul: string; slug: string; langkah_rekomendasi: string[] };
 type Saran = { tugas_id: string; slug: string; judul: string; skor: number; kata_kunci_cocok: string[] };
@@ -49,22 +51,62 @@ export default function UnggahDokumenPage() {
     setMemprosesEkstraksi(true);
     setErrorEkstraksi('');
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('judul', judul || file.name);
-
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const jenisFile = TIPE_FILE_DIIZINKAN[file.type];
+      if (!jenisFile) {
+        throw new Error('Format file tidak didukung. Gunakan PDF, JPG, PNG, atau WEBP.');
+      }
+      if (file.size > MAKS_UKURAN_FILE) {
+        throw new Error(`Ukuran file melebihi ${Math.round(MAKS_UKURAN_FILE / 1024 / 1024)}MB.`);
+      }
+
+      // 1) Unggah file LANGSUNG dari browser ke Supabase Storage (tidak lewat
+      //    server Next.js), agar tidak terbentur batas 4.5MB request body
+      //    milik Vercel Serverless Function.
+      const supabase = createClient();
+      const ekstensi = ekstensiDariNamaFile(file.name, jenisFile);
+      const namaFile = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ekstensi}`;
+      const path = `dokumen/${namaFile}`;
+
+      const { error: uploadError } = await supabase.storage.from('dokumen').upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (uploadError) {
+        throw new Error(
+          `Gagal mengunggah file ke Storage: ${uploadError.message}. Pastikan Anda sudah login dan policy Storage sudah diterapkan (lihat supabase/storage-setup.sql).`
+        );
+      }
+
+      const { data: publicUrlData } = supabase.storage.from('dokumen').getPublicUrl(path);
+      const fileUrl = publicUrlData.publicUrl;
+
+      // 2) Minta server membaca teksnya (OCR/ekstraksi PDF) & klasifikasi otomatis,
+      //    hanya dengan mengirim URL (payload kecil, aman dari batas Vercel).
+      const res = await fetch('/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_url: fileUrl, jenis_file: jenisFile, judul: judul || file.name }),
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Gagal memproses file.');
 
-      setHasilUpload(json.data);
-      setSaranKlasifikasi(json.data.saran_klasifikasi || []);
+      const dataGabungan = {
+        file_path: path,
+        file_url: fileUrl,
+        jenis_file: jenisFile,
+        ukuran_file: file.size,
+        konten_teks: json.data.konten_teks,
+        saran_klasifikasi: json.data.saran_klasifikasi,
+      };
+
+      setHasilUpload(dataGabungan);
+      setSaranKlasifikasi(dataGabungan.saran_klasifikasi || []);
 
       if (!judul) setJudul(file.name.replace(/\.[^.]+$/, ''));
 
       // Prefill tugas dari saran teratas (jika skornya > 0)
-      const terbaik = (json.data.saran_klasifikasi || [])[0];
+      const terbaik = (dataGabungan.saran_klasifikasi || [])[0];
       if (terbaik && terbaik.skor > 0) {
         setTugasId(terbaik.tugas_id);
         const t = daftarTugas.find((x) => x.id === terbaik.tugas_id);
@@ -187,7 +229,7 @@ export default function UnggahDokumenPage() {
       {langkah === 1 && (
         <form onSubmit={handleEkstraksi} className="card mt-6 max-w-xl space-y-4 p-6">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">File Dokumen (PDF, JPG, PNG, WEBP — maks 15MB)</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">File Dokumen (PDF, JPG, PNG, WEBP — maks 30MB)</label>
             <input
               type="file"
               required

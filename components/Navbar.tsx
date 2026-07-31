@@ -9,8 +9,8 @@ export default function Navbar() {
             LPJK
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-slate-900">SIDASHUM LPJK</p>
-            <p className="text-[11px] text-slate-500">Repository Dasar Hukum di LPJK</p>
+            <p className="text-sm font-semibold text-slate-900">Dasar Hukum Tugas LPJK</p>
+            <p className="text-[11px] text-slate-500">PP No. 14 Tahun 2021</p>
           </div>
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 sm:flex">

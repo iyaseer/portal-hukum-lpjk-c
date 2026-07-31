@@ -13,13 +13,12 @@ export default async function TugasPage({ params }: { params: { slug: string } }
   const { data: tugas } = await supabase.from('tugas').select('*').eq('slug', params.slug).single();
   if (!tugas) return notFound();
 
-  // Ubah sorting berdasarkan kolom tanggal terbit
   const { data: dokumenList } = await supabase
     .from('dokumen')
     .select('*, tugas:tugas_id(*)')
     .eq('tugas_id', tugas.id)
     .eq('status_publikasi', 'terbit')
-    .order('tanggal_dokumen', { ascending: false });
+    .order('created_at', { ascending: false });
 
   return (
     <>

@@ -47,8 +47,9 @@ sederhana (skala instansi kecil/menengah).
 3. Copy-paste seluruh isi file `supabase/schema.sql` dari proyek ini, lalu **Run**.
    - Ini akan membuat tabel `tugas` dan `dokumen`, mengaktifkan Row Level Security, dan mengisi **7 tugas LPJK** secara otomatis (silakan disesuaikan redaksinya nanti lewat panel admin bila diperlukan).
 4. Buat query baru lagi, copy-paste isi file `supabase/storage-setup.sql`, lalu **Run**.
-   - Ini membuat bucket Storage bernama `dokumen` (public) tempat file PDF/gambar disimpan.
-   - Alternatif: buat manual lewat menu **Storage → New bucket**, nama `dokumen`, centang **Public bucket**.
+   - Ini membuat bucket Storage bernama `dokumen` (public) tempat file PDF/gambar disimpan, sekaligus policy yang mengizinkan admin (yang sudah login) mengunggah file **langsung dari browser** ke Storage.
+   - Alternatif: buat manual lewat menu **Storage → New bucket**, nama `dokumen`, centang **Public bucket** — tapi tetap perlu jalankan bagian policy `insert`/`delete` di file ini agar tombol unggah dokumen berfungsi.
+   - **Sudah pernah setup sebelumnya?** Jalankan ulang file ini — bagian policy `insert`/`delete` untuk admin ini baru ditambahkan agar upload file besar tidak lagi terbentur batas 4,5MB milik Vercel (lihat Catatan #9 di bawah).
 5. Buka menu **Project Settings → API**. Catat 3 nilai berikut (akan dipakai di langkah 4):
    - `Project URL` → jadi `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → jadi `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -158,7 +159,7 @@ app/                    → halaman & API (Next.js App Router)
   ├─ tugas/[slug]/        → daftar dokumen per tugas
   ├─ dokumen/[id]/        → detail dokumen
   ├─ admin/               → panel admin (login, dashboard, CRUD)
-  └─ api/                 → route handler (documents, tugas, upload, ai-analyze, search, auth)
+  └─ api/                 → route handler (documents, tugas, extract, ai-analyze, search, auth)
 components/             → komponen UI reusable
 lib/
   ├─ supabase/            → client Supabase (browser/server/admin)
@@ -178,6 +179,6 @@ middleware.ts           → proteksi rute /admin & sesi Supabase Auth
 - **Akurasi OCR**: hasil OCR bergantung pada kualitas/resolusi gambar yang diunggah — gunakan scan yang jelas untuk hasil pembacaan terbaik. Fitur "Analisis dengan AI" membantu menutupi kekurangan ini karena membaca file aslinya, bukan cuma teks OCR.
 - **Klasifikasi kata kunci** bersifat rule-based, gratis, dan berjalan otomatis di setiap upload — cocok sebagai metode utama. **Analisis AI** bersifat opsional/manual (tombol), lebih presisi tapi memakai kuota Gemini API.
 - **Privasi data ke Gemini**: saat tombol "Analisis dengan AI" diklik, isi dokumen (teks dan/atau file) dikirim ke server Google untuk diproses. Pertimbangkan hal ini bila dokumen bersifat rahasia/sensitif — gunakan klasifikasi kata kunci saja untuk dokumen semacam itu.
-- **Batas ukuran file**: 15 MB per dokumen (bisa diubah di `app/api/upload/route.ts`, variabel `MAKS_UKURAN`), menyesuaikan batas durasi fungsi serverless Vercel Hobby plan.
+- **Batas ukuran file**: 30 MB per dokumen (bisa diubah di `lib/file-config.ts`, variabel `MAKS_UKURAN_FILE`). File diunggah **langsung dari browser ke Supabase Storage** (bukan lewat API route Next.js), sehingga tidak terbentur batas ukuran *request body* 4,5 MB milik Vercel Serverless Function. Server hanya membaca ulang file dari URL publiknya untuk OCR/ekstraksi teks (lihat `app/api/extract/route.ts`).
 - **Kuota gratis**: Supabase Free tier memberi 500MB database + 1GB storage; Vercel Hobby cukup untuk trafik ringan-menengah; Gemini API free tier (per pertengahan 2026) sekitar 1.000–1.500 permintaan/hari untuk model Flash-Lite. Untuk penggunaan lebih besar, pertimbangkan upgrade plan berbayar masing-masing layanan.
 - **Model Gemini cepat berganti**: Google cukup sering mempensiunkan/mengganti nama model (mis. `gemini-2.5-flash` sudah ditutup untuk API key baru per 2026). Jika suatu saat tombol "Analisis dengan AI" gagal dengan error `404 ... no longer available`, buka https://ai.google.dev/gemini-api/docs/models, cari model Flash/Flash-Lite yang masih *generally available* & masuk free tier, lalu ganti nilai `GEMINI_MODEL` di `lib/ai-analyze.ts`.

@@ -15,12 +15,9 @@ export type HasilAnalisisAI = {
   alasan: string;
 };
 
-<<<<<<< HEAD
 // Gemini 3.5 Flash-Lite: model GA (production-ready) yang direkomendasikan Google
 // untuk tugas klasifikasi/ekstraksi berbiaya rendah, dan masih masuk free tier.
 // (gemini-2.5-flash sudah dipensiunkan untuk API key/proyek baru per 2026)
-=======
->>>>>>> 90d4e65c7a29f27befec680860369cae05c11bdf
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
