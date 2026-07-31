@@ -35,7 +35,7 @@ export default async function BerandaPage() {
               Koleksi Dasar Hukum Tugas LPJK
             </h1>
             <p className="mt-3 max-w-xl text-slate-600">
-              Cari dokumen hukum untuk 7 tugas Lembaga Pengembangan Jasa Konstruksi dan dapatkan
+              Cari dokumen hukum terkait tugas dan fungsi Lembaga Pengembangan Jasa Konstruksi dan dapatkan
               rekomendasi langkah pemenuhan secara langsung.
             </p>
             <div className="mt-6 w-full flex justify-center">

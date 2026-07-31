@@ -1,0 +1,8 @@
+{
+  "/page": "app/page.js",
+  "/cari/page": "app/cari/page.js",
+  "/tugas/[slug]/page": "app/tugas/[slug]/page.js",
+  "/dokumen/[id]/page": "app/dokumen/[id]/page.js",
+  "/admin/login/page": "app/admin/login/page.js",
+  "/admin/page": "app/admin/page.js"
+}

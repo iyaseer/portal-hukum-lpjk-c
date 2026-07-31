@@ -12,6 +12,7 @@ Jasa Konstruksi.
 - **Rekomendasi pemenuhan** — setiap hasil pencarian / halaman tugas / halaman dokumen menampilkan kotak "Langkah Rekomendasi Pemenuhan".
 - **Panel admin** — login (Supabase Auth), CRUD dokumen, kelola 7 tugas (judul, deskripsi, kata kunci, langkah rekomendasi).
 - **Upload + klasifikasi otomatis** — saat admin mengunggah file, sistem otomatis membaca teksnya (ekstraksi PDF / OCR gambar) lalu menyarankan tugas yang paling relevan berdasarkan kecocokan kata kunci.
+- **Analisis dengan AI (opsional)** — tombol manual di halaman Unggah Dokumen yang memakai Google Gemini untuk "membaca" dokumen aslinya (bukan cuma teks OCR) dan mengekstrak jenis peraturan, nomor dokumen, tanggal, instansi penerbit, ringkasan, serta klasifikasi tugas yang lebih presisi dibanding pencocokan kata kunci biasa.
 
 ## Teknologi
 
@@ -22,6 +23,7 @@ Jasa Konstruksi.
 | Penyimpanan file | Supabase Storage — gratis |
 | OCR gambar | Tesseract.js (berjalan di server, tanpa API berbayar) |
 | Ekstraksi teks PDF | pdf-parse |
+| Analisis AI (opsional) | Google Gemini API (`gemini-3.5-flash-lite`) — ada kuota gratis harian |
 | Hosting | Vercel (Hobby plan — gratis) |
 
 Semua komponen di atas punya tingkatan gratis yang cukup untuk penggunaan
@@ -62,7 +64,21 @@ sederhana (skala instansi kecil/menengah).
 
 ---
 
-## 3. Unggah kode ke GitHub
+## 3. Setup Google Gemini API (opsional — untuk fitur "Analisis dengan AI")
+
+Lewati bagian ini bila Anda cukup memakai klasifikasi kata kunci bawaan (gratis, tanpa key tambahan).
+
+1. Buka [aistudio.google.com/apikey](https://aistudio.google.com/apikey), login dengan akun Google.
+2. Klik **Create API key** → pilih/buat sebuah Google Cloud project → salin key yang muncul (diawali `AIza...`).
+3. Simpan sebagai `GEMINI_API_KEY` (lihat Langkah 4 — Environment Variables di Vercel, atau `.env.local` untuk lokal).
+
+**Tentang kuota gratis:** per awal 2026, tingkat gratis `gemini-2.5-flash` memberi sekitar 10 permintaan/menit dan 250 permintaan/hari — lebih dari cukup karena fitur ini dipicu manual oleh admin per dokumen, bukan otomatis. Google dapat mengubah kuota ini sewaktu-waktu; cek [ai.google.dev/pricing](https://ai.google.dev/pricing) untuk info terbaru.
+
+> Jika `GEMINI_API_KEY` tidak diisi, seluruh situs tetap berjalan normal — hanya tombol "Analisis dengan AI" yang akan menampilkan pesan error bila diklik. Klasifikasi kata kunci (gratis) tetap aktif sebagai metode utama.
+
+---
+
+## 4. Unggah kode ke GitHub
 
 Jika Anda menerima proyek ini sebagai folder/zip, jalankan di terminal:
 
@@ -81,7 +97,7 @@ Ganti `USERNAME/NAMA-REPO` dengan repository GitHub yang sudah Anda buat
 
 ---
 
-## 4. Deploy ke Vercel
+## 5. Deploy ke Vercel
 
 1. Buka [vercel.com/new](https://vercel.com/new), pilih **Import Git Repository**, lalu pilih repo GitHub yang baru Anda push.
 2. Vercel otomatis mendeteksi ini sebagai proyek Next.js — biarkan pengaturan build default.
@@ -92,6 +108,7 @@ Ganti `USERNAME/NAMA-REPO` dengan repository GitHub yang sudah Anda buat
    | `NEXT_PUBLIC_SUPABASE_URL` | (Project URL dari Supabase) |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (anon public key) |
    | `SUPABASE_SERVICE_ROLE_KEY` | (service_role key) |
+   | `GEMINI_API_KEY` | (opsional — key dari Langkah 3, hanya bila ingin fitur Analisis dengan AI) |
 
 4. Klik **Deploy**. Tunggu 1–2 menit hingga selesai.
 5. Situs Anda akan aktif di `https://nama-project-anda.vercel.app`.
@@ -101,7 +118,7 @@ Setiap kali Anda `git push` ke branch `main`, Vercel otomatis build & deploy ula
 
 ---
 
-## 5. Menjalankan di komputer lokal (opsional, untuk pengembangan)
+## 6. Menjalankan di komputer lokal (opsional, untuk pengembangan)
 
 ```bash
 npm install
@@ -115,7 +132,7 @@ Buka `http://localhost:3000`. Panel admin ada di `http://localhost:3000/admin`.
 
 ---
 
-## 6. Cara pakai
+## 7. Cara pakai
 
 ### Sebagai pengunjung publik
 - Buka beranda → cari lewat kotak pencarian, atau telusuri lewat salah satu dari **7 kartu tugas LPJK**.
@@ -125,13 +142,14 @@ Buka `http://localhost:3000`. Panel admin ada di `http://localhost:3000/admin`.
 1. Login di `/admin`.
 2. **Unggah Dokumen** → pilih file PDF/gambar → klik **Ekstrak Teks & Klasifikasikan**.
    - Sistem membaca teks dokumen (OCR untuk gambar, ekstraksi langsung untuk PDF) dan menampilkan **saran klasifikasi tugas** beserta skor kecocokan kata kunci.
-3. Lengkapi metadata (judul, nomor, jenis peraturan, tanggal, sumber), pilih/ubah tugas terkait, sunting langkah rekomendasi bila perlu, lalu **Simpan Dokumen**.
-4. Di menu **Dokumen**, Anda bisa mengubah status (Terbit/Draft), mengedit, atau menghapus dokumen.
-5. Di menu **Kelola 7 Tugas**, Anda bisa menyunting judul/deskripsi/kata kunci/langkah rekomendasi masing-masing tugas — ini juga memengaruhi hasil klasifikasi otomatis ke depannya.
+3. (Opsional) Klik **✨ Analisis dengan AI** di sisi kanan untuk hasil yang lebih presisi — AI akan membaca dokumen aslinya dan otomatis mengisi jenis peraturan, nomor, tanggal, instansi penerbit, serta tugas terkait beserta tingkat keyakinannya. Field yang terisi otomatis tetap bisa Anda sunting.
+4. Lengkapi metadata (judul, nomor, jenis peraturan, tanggal, sumber), pilih/ubah tugas terkait, sunting langkah rekomendasi bila perlu, lalu **Simpan Dokumen**.
+5. Di menu **Dokumen**, Anda bisa mengubah status (Terbit/Draft), mengedit, atau menghapus dokumen.
+6. Di menu **Kelola 7 Tugas**, Anda bisa menyunting judul/deskripsi/kata kunci/langkah rekomendasi masing-masing tugas — ini juga memengaruhi hasil klasifikasi otomatis ke depannya.
 
 ---
 
-## 7. Struktur folder singkat
+## 8. Struktur folder singkat
 
 ```
 app/                    → halaman & API (Next.js App Router)
@@ -140,12 +158,13 @@ app/                    → halaman & API (Next.js App Router)
   ├─ tugas/[slug]/        → daftar dokumen per tugas
   ├─ dokumen/[id]/        → detail dokumen
   ├─ admin/               → panel admin (login, dashboard, CRUD)
-  └─ api/                 → route handler (documents, tugas, upload, search, auth)
+  └─ api/                 → route handler (documents, tugas, upload, ai-analyze, search, auth)
 components/             → komponen UI reusable
 lib/
   ├─ supabase/            → client Supabase (browser/server/admin)
   ├─ ocr.ts               → OCR gambar (Tesseract.js) & ekstraksi teks PDF
-  ├─ classify.ts          → logika klasifikasi otomatis berbasis kata kunci
+  ├─ classify.ts          → logika klasifikasi otomatis berbasis kata kunci (gratis, default)
+  ├─ ai-analyze.ts        → integrasi Google Gemini untuk analisis presisi tinggi (opsional)
   └─ types.ts             → tipe data TypeScript
 supabase/
   ├─ schema.sql            → skema tabel + seed 7 tugas LPJK
@@ -153,10 +172,12 @@ supabase/
 middleware.ts           → proteksi rute /admin & sesi Supabase Auth
 ```
 
-## 8. Catatan & batasan
+## 9. Catatan & batasan
 
 - **Redaksi 7 tugas**: teks judul/deskripsi/dasar hukum 7 tugas pada `schema.sql` disusun berdasarkan ringkasan tugas LPJK yang berlaku umum. **Silakan periksa dan sesuaikan redaksinya** dengan salinan resmi PP No. 14/2021 melalui panel **Kelola 7 Tugas** agar sesuai kebutuhan instansi Anda.
-- **Akurasi OCR**: hasil OCR bergantung pada kualitas/resolusi gambar yang diunggah — gunakan scan yang jelas untuk hasil pembacaan terbaik.
-- **Klasifikasi otomatis** bersifat rule-based (pencocokan kata kunci), bukan AI generatif — cepat, gratis, dan hasilnya bisa dikoreksi manual oleh admin sebelum disimpan.
+- **Akurasi OCR**: hasil OCR bergantung pada kualitas/resolusi gambar yang diunggah — gunakan scan yang jelas untuk hasil pembacaan terbaik. Fitur "Analisis dengan AI" membantu menutupi kekurangan ini karena membaca file aslinya, bukan cuma teks OCR.
+- **Klasifikasi kata kunci** bersifat rule-based, gratis, dan berjalan otomatis di setiap upload — cocok sebagai metode utama. **Analisis AI** bersifat opsional/manual (tombol), lebih presisi tapi memakai kuota Gemini API.
+- **Privasi data ke Gemini**: saat tombol "Analisis dengan AI" diklik, isi dokumen (teks dan/atau file) dikirim ke server Google untuk diproses. Pertimbangkan hal ini bila dokumen bersifat rahasia/sensitif — gunakan klasifikasi kata kunci saja untuk dokumen semacam itu.
 - **Batas ukuran file**: 15 MB per dokumen (bisa diubah di `app/api/upload/route.ts`, variabel `MAKS_UKURAN`), menyesuaikan batas durasi fungsi serverless Vercel Hobby plan.
-- **Kuota gratis**: Supabase Free tier memberi 500MB database + 1GB storage; Vercel Hobby cukup untuk trafik ringan-menengah. Untuk penggunaan lebih besar, pertimbangkan upgrade plan berbayar masing-masing layanan.
+- **Kuota gratis**: Supabase Free tier memberi 500MB database + 1GB storage; Vercel Hobby cukup untuk trafik ringan-menengah; Gemini API free tier (per pertengahan 2026) sekitar 1.000–1.500 permintaan/hari untuk model Flash-Lite. Untuk penggunaan lebih besar, pertimbangkan upgrade plan berbayar masing-masing layanan.
+- **Model Gemini cepat berganti**: Google cukup sering mempensiunkan/mengganti nama model (mis. `gemini-2.5-flash` sudah ditutup untuk API key baru per 2026). Jika suatu saat tombol "Analisis dengan AI" gagal dengan error `404 ... no longer available`, buka https://ai.google.dev/gemini-api/docs/models, cari model Flash/Flash-Lite yang masih *generally available* & masuk free tier, lalu ganti nilai `GEMINI_MODEL` di `lib/ai-analyze.ts`.

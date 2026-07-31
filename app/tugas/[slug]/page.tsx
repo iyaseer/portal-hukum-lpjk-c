@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import DocumentCard from '@/components/DocumentCard';
+import DocumentTable from '@/components/DocumentTable';
 import RecommendationBox from '@/components/RecommendationBox';
 import { createClient } from '@/lib/supabase/server';
 
@@ -13,12 +13,13 @@ export default async function TugasPage({ params }: { params: { slug: string } }
   const { data: tugas } = await supabase.from('tugas').select('*').eq('slug', params.slug).single();
   if (!tugas) return notFound();
 
+  // Ubah sorting berdasarkan kolom tanggal terbit
   const { data: dokumenList } = await supabase
     .from('dokumen')
     .select('*, tugas:tugas_id(*)')
     .eq('tugas_id', tugas.id)
     .eq('status_publikasi', 'terbit')
-    .order('created_at', { ascending: false });
+    .order('tanggal_dokumen', { ascending: false });
 
   return (
     <>
@@ -36,16 +37,7 @@ export default async function TugasPage({ params }: { params: { slug: string } }
             <h2 className="mb-4 text-sm font-semibold text-slate-700">
               Dokumen Hukum Terkait ({dokumenList?.length || 0})
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(dokumenList || []).map((d) => (
-                <DocumentCard key={d.id} dokumen={d} />
-              ))}
-            </div>
-            {(!dokumenList || dokumenList.length === 0) && (
-              <div className="card p-6 text-sm text-slate-500">
-                Belum ada dokumen yang diunggah untuk tugas ini.
-              </div>
-            )}
+            <DocumentTable dokumenList={(dokumenList || []) as any} />
           </div>
           <aside>
             <RecommendationBox judulTugas={tugas.judul} langkah={tugas.langkah_rekomendasi} />

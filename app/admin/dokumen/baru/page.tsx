@@ -32,6 +32,11 @@ export default function UnggahDokumenPage() {
   const [menyimpan, setMenyimpan] = useState(false);
   const [errorSimpan, setErrorSimpan] = useState('');
 
+  // Analisis AI (Gemini) - opsional, dipicu manual
+  const [menganalisisAI, setMenganalisisAI] = useState(false);
+  const [errorAI, setErrorAI] = useState('');
+  const [hasilAI, setHasilAI] = useState<any>(null);
+
   useEffect(() => {
     fetch('/api/tugas')
       .then((r) => r.json())
@@ -78,6 +83,46 @@ export default function UnggahDokumenPage() {
     setTugasId(id);
     const t = daftarTugas.find((x) => x.id === id);
     if (t) setLangkahRekomendasi(t.langkah_rekomendasi.join('\n'));
+  }
+
+  async function handleAnalisisAI() {
+    if (!hasilUpload) return;
+    setMenganalisisAI(true);
+    setErrorAI('');
+    setHasilAI(null);
+
+    try {
+      const res = await fetch('/api/ai-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul,
+          konten_teks: hasilUpload.konten_teks,
+          jenis_file: hasilUpload.jenis_file,
+          file_url: hasilUpload.file_url,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal menganalisis dokumen dengan AI.');
+
+      const hasil = json.data;
+      setHasilAI(hasil);
+
+      // Isi otomatis field metadata dari hasil AI (admin tetap bisa menyunting)
+      if (hasil.jenis_peraturan) setJenisPeraturan(hasil.jenis_peraturan);
+      if (hasil.nomor_dokumen) setNomorDokumen(hasil.nomor_dokumen);
+      if (hasil.tanggal_dokumen) setTanggalDokumen(hasil.tanggal_dokumen);
+      if (hasil.instansi_penerbit) setSumber(hasil.instansi_penerbit);
+
+      if (hasil.tugas_slug) {
+        const t = daftarTugas.find((x) => x.slug === hasil.tugas_slug);
+        if (t) pilihTugas(t.id);
+      }
+    } catch (err: any) {
+      setErrorAI(err.message || 'Terjadi kesalahan.');
+    } finally {
+      setMenganalisisAI(false);
+    }
   }
 
   async function handleSimpan(e: React.FormEvent) {
@@ -240,8 +285,48 @@ export default function UnggahDokumenPage() {
           </div>
 
           <aside className="space-y-4">
+            <div className="card border-violet-200 bg-violet-50/50 p-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-violet-900">✨ Analisis dengan AI</h3>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Baca dokumen aslinya (bukan cuma kata kunci) untuk mengekstrak nomor, tanggal,
+                instansi, ringkasan, dan klasifikasi tugas yang lebih presisi — memakai Google Gemini.
+              </p>
+              <button
+                type="button"
+                onClick={handleAnalisisAI}
+                disabled={menganalisisAI}
+                className="mt-3 w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {menganalisisAI ? 'Menganalisis dokumen...' : 'Analisis dengan AI'}
+              </button>
+              {errorAI && <p className="mt-2 text-xs text-red-600">{errorAI}</p>}
+              {hasilAI && (
+                <div className="mt-3 space-y-2 rounded-lg bg-white p-3 text-xs">
+                  <p>
+                    <span className="font-medium text-slate-600">Keyakinan klasifikasi:</span>{' '}
+                    <span className="badge">{hasilAI.keyakinan}%</span>
+                  </p>
+                  {hasilAI.alasan && (
+                    <p className="text-slate-500">
+                      <span className="font-medium text-slate-600">Alasan: </span>
+                      {hasilAI.alasan}
+                    </p>
+                  )}
+                  {hasilAI.ringkasan && (
+                    <p className="text-slate-500">
+                      <span className="font-medium text-slate-600">Ringkasan: </span>
+                      {hasilAI.ringkasan}
+                    </p>
+                  )}
+                  <p className="text-slate-400">Field metadata di formulir sudah diisi otomatis — silakan periksa &amp; sunting bila perlu.</p>
+                </div>
+              )}
+            </div>
+
             <div className="card p-5">
-              <h3 className="text-sm font-semibold text-slate-700">Saran Klasifikasi Otomatis</h3>
+              <h3 className="text-sm font-semibold text-slate-700">Saran Klasifikasi Otomatis (kata kunci)</h3>
               <p className="mt-1 text-xs text-slate-400">
                 Berdasarkan kemunculan kata kunci pada judul &amp; teks hasil ekstraksi.
               </p>
