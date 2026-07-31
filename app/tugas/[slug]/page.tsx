@@ -18,7 +18,7 @@ export default async function TugasPage({ params }: { params: { slug: string } }
     .select('*, tugas:tugas_id(*)')
     .eq('tugas_id', tugas.id)
     .eq('status_publikasi', 'terbit')
-    .order('created_at', { ascending: false });
+    .order('tanggal_dokumen', { ascending: false });
 
   return (
     <>
